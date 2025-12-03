@@ -19,7 +19,7 @@ public class PartnerService {
         Query query = em.createNativeQuery(sql, String.class);
         query.setParameter("lng", lng);
         query.setParameter("lat", lat);
-        return query.getResultList();
+        return (List<String>) query.getResultList();
     }
 
     public String getClosestPartner (double lng, double lat) {

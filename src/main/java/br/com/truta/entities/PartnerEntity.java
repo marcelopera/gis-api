@@ -21,11 +21,9 @@ public class PartnerEntity extends PanacheEntity {
     @Column(nullable = false, unique = true)
     public String document;
 
-    // Hibernate Spatial cuida da persistência. Nome simples.
     @Column(nullable = false, columnDefinition = "geometry(Point, 4326)")
     public Point address; 
 
-    // Hibernate Spatial cuida da persistência. Nome simples.
     @Column(nullable = false, columnDefinition = "geometry(MultiPolygon, 4326)")
     public MultiPolygon coverageArea;
 }

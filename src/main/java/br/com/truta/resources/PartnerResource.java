@@ -7,15 +7,17 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.geojson.GeoJsonReader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 import br.com.truta.entities.PartnerEntity;
 import br.com.truta.service.PartnerService;
+import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional; // Adicionar para escrita
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -41,7 +43,8 @@ public class PartnerResource {
     @POST
     @Transactional
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createPartner(JsonNode json) throws Exception {
+    @RunOnVirtualThread
+    public Response createPartner(JsonNode json) {
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         GeoJsonReader reader = new GeoJsonReader(geometryFactory);
 
@@ -50,14 +53,15 @@ public class PartnerResource {
         entity.ownerName = json.get("ownerName").asText();
         entity.document = json.get("document").asText();
 
-        entity.address = (Point) reader.read(json.get("address").toString());
-        entity.coverageArea = (MultiPolygon) reader.read(json.get("coverageArea").toString());
+        try {
+            entity.address = (Point) reader.read(json.get("address").toString());
+            entity.coverageArea = (MultiPolygon) reader.read(json.get("coverageArea").toString());
+        } catch (ParseException e) {
+            logger.error("Falha ao transformar json em geometria: " + e.getMessage(), e);
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
 
         entity.persist();
-
-        logger.info("Address: " + entity.address);
-        logger.info("Coverage Area: " + entity.coverageArea);
-
         return Response.status(Response.Status.CREATED).entity(entity.coverageArea).build();
     }
 
