@@ -78,7 +78,7 @@
 #   accessed directly. (example: "foo.example.com,bar.example.com")
 #
 ###
-FROM registry.access.redhat.com/ubi9/openjdk-21:1.23
+FROM docker.binarios.intranet.bb.com.br/bb/dev/dev-java:21.8.3
 
 ENV LANGUAGE='en_US:en'
 

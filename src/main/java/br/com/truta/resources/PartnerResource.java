@@ -10,11 +10,13 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.geojson.GeoJsonReader;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import br.com.truta.entities.PartnerEntity;
+import br.com.truta.entities.PartnerEntityReactive;
+import br.com.truta.models.PartnerDTO;
 import br.com.truta.service.PartnerService;
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -44,50 +46,32 @@ public class PartnerResource {
     @Transactional
     @Consumes(MediaType.APPLICATION_JSON)
     @RunOnVirtualThread
-    public Response createPartner(JsonNode json) {
-        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
-        GeoJsonReader reader = new GeoJsonReader(geometryFactory);
-
-        PartnerEntity entity = new PartnerEntity();
-        entity.tradingName = json.get("tradingName").asText();
-        entity.ownerName = json.get("ownerName").asText();
-        entity.document = json.get("document").asText();
-
-        try {
-            entity.address = (Point) reader.read(json.get("address").toString());
-            entity.coverageArea = (MultiPolygon) reader.read(json.get("coverageArea").toString());
-        } catch (ParseException e) {
-            logger.error("Falha ao transformar json em geometria: " + e.getMessage(), e);
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-
-        entity.persist();
-        return Response.status(Response.Status.CREATED).entity(entity.coverageArea).build();
+    public Response createPartner(PartnerDTO partner) {
+        return ps.persistPartner(partner);
+        
     }
 
     @GET
-    public List<PartnerEntity> getAllPartners() {
-        return PartnerEntity.listAll();
+    public Uni<List<PartnerEntityReactive>> getAllPartners() {
+        return PartnerEntityReactive.listAll();
     }
 
     @GET
     @Path("{id}")
-    public Response getPartnerById(@PathParam("id") long id) {
-        PartnerEntity p = PartnerEntity.findById(id);
-        if (p == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-        return Response.ok(p).build();
+    public Uni<Response> getPartnerById(@PathParam("id") long id) {
+        return PartnerEntityReactive.<PartnerEntityReactive>findById(id)
+                    .map(pe -> Response.ok(pe.id).build())
+                    .replaceIfNullWith(() -> Response.status(Response.Status.NOT_FOUND).build());
     }
 
     @POST
     @Path("/coverage")
-    public List<String> getPartners(@QueryParam("lng") double lng, @QueryParam("lat") double lat) {
-        return ps.getPartnersByCoverage(lng, lat);
+    public Uni<List<String>> getPartners(@QueryParam("lng") double lng, @QueryParam("lat") double lat) {
+        return Uni.createFrom().item(ps.getPartnersByCoverage(lng, lat)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
     @POST
     @Path("/closest")
-    public String getPartner(@QueryParam("lng") double lng, @QueryParam("lat") double lat) {
-        return ps.getClosestPartner(lng, lat);
+    public Uni<String> getPartner(@QueryParam("lng") double lng, @QueryParam("lat") double lat) {
+        return Uni.createFrom().item(ps.getClosestPartner(lng, lat)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }

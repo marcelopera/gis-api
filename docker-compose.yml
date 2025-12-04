@@ -10,6 +10,8 @@ services:
       - postgis_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - gis-network
 
   app:
     build: .
@@ -24,6 +26,8 @@ services:
       QUARKUS_PROFILE: prod
     ports:
       - "8080:8080"
+    networks:
+      - gis-network
     # Se precisar recompilar dentro do container:
     # build:
     #   context: .
@@ -33,3 +37,6 @@ services:
 
 volumes:
   postgis_data:
+
+networks:
+  gis-network:
