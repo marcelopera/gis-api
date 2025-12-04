@@ -3,15 +3,8 @@ package br.com.truta.resources;
 import java.util.List;
 
 import org.jboss.logging.Logger;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.MultiPolygon;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
-import org.locationtech.jts.io.ParseException;
-import org.locationtech.jts.io.geojson.GeoJsonReader;
 
 import br.com.truta.entities.PartnerEntity;
-import br.com.truta.entities.PartnerEntityReactive;
 import br.com.truta.models.PartnerDTO;
 import br.com.truta.service.PartnerService;
 import io.smallrye.common.annotation.RunOnVirtualThread;
@@ -52,26 +45,28 @@ public class PartnerResource {
     }
 
     @GET
-    public Uni<List<PartnerEntityReactive>> getAllPartners() {
-        return PartnerEntityReactive.listAll();
+    public Uni<List<PartnerEntity>> getAllPartners() {
+        return Uni.createFrom().<List<PartnerEntity>>item(() -> 
+            PartnerEntity.listAll()
+        ).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
     @Path("{id}")
     public Uni<Response> getPartnerById(@PathParam("id") long id) {
-        return PartnerEntityReactive.<PartnerEntityReactive>findById(id)
+        return Uni.createFrom().item(() -> PartnerEntity.<PartnerEntity>findById(id))
                     .map(pe -> Response.ok(pe.id).build())
-                    .replaceIfNullWith(() -> Response.status(Response.Status.NOT_FOUND).build());
+                    .replaceIfNullWith(() -> Response.status(Response.Status.NOT_FOUND).build()).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
     @Path("/coverage")
     public Uni<List<String>> getPartners(@QueryParam("lng") double lng, @QueryParam("lat") double lat) {
-        return Uni.createFrom().item(ps.getPartnersByCoverage(lng, lat)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return Uni.createFrom().item(() -> ps.getPartnersByCoverage(lng, lat)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
     @POST
     @Path("/closest")
     public Uni<String> getPartner(@QueryParam("lng") double lng, @QueryParam("lat") double lat) {
-        return Uni.createFrom().item(ps.getClosestPartner(lng, lat)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return Uni.createFrom().item(() -> ps.getClosestPartner(lng, lat)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }

@@ -47,8 +47,7 @@ public class PartnerService {
         query.setParameter("lat", lat);
         return (String) query.getResultList().get(0);
     }
-
-    @Transactional
+    
     public Response persistPartner(PartnerDTO dto) {
         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         GeoJsonReader reader = new GeoJsonReader(geometryFactory);
